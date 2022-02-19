@@ -1,0 +1,115 @@
+Description: Launch instances
+Parameters:
+  SSHKey:
+    Description: Please enter key name.
+    Type: String
+    Default: MyAWSKey
+  StackName:
+    Description: Please enter name of Base Stack
+    Type: String
+    Default: MyBase
+
+Resources:
+
+  PublicInstanceSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: SG for PublicInstances
+      GroupName: PublicInstanceSG
+      SecurityGroupIngress: 
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0 
+      Tags: 
+        - Key: Name
+          Value: PublicInstanceSG
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${StackName}:VPC"
+
+  PrivateInstanceSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: SG for PrivateInstances
+      GroupName: PrivateInstanceSG
+      SecurityGroupIngress: 
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0 
+      Tags: 
+        - Key: Name
+          Value: PrivateInstanceSG
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${StackName}:VPC"
+
+  PublicInstance01:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: !Ref SSHKey
+      ImageId: ami-033b95fb8079dc481
+      InstanceType: t2.micro
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: 
+            Fn::ImportValue:
+              !Sub "${StackName}:MyFirstSubnet"
+          GroupSet: 
+            - Ref: PrivateInstanceSG 
+      Tags:
+        - Key: Name
+          Value: PublicInstance01
+
+  PrivateInstance01:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: !Ref SSHKey
+      ImageId: ami-033b95fb8079dc481
+      InstanceType: t2.micro
+      NetworkInterfaces: 
+        - AssociatePublicIpAddress: "false"
+          DeviceIndex: "0"
+          SubnetId: 
+            Fn::ImportValue:
+              !Sub "${StackName}:MyFirstPrivateSubnet"
+          GroupSet: 
+            - Ref: PrivateInstanceSG
+      Tags:
+        - Key: Name
+          Value: PrivateInstance01
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          echo "root:oNvrt8Ugag89kncyFD" | chpasswd
+          echo "PermitRootLogin yes" > /etc/ssh/sshd
+          systemctl reload sshd
+
+# Define outputs so values can be imported in another template
+Outputs:
+
+  PublicInstanceSGRef:
+    Description: Reference to the Webserver Security Group
+    Value: !Ref WebserverSG
+    Export:
+      Name: !Join [ ":", [ !Ref "AWS::StackName", PublicInstanceSG ] ]
+
+  PrivateInstanceSGRef:
+    Description: Reference to the Webserver Security Group
+    Value: !Ref WebserverSG
+    Export:
+      Name: !Join [ ":", [ !Ref "AWS::StackName", PrivateInstanceSG ] ]
+
+ PublicInstance01Ref:
+    Description: Reference to the PublicInstance01
+    Value: !Ref Webserver01
+    Export:
+      Name: !Join [ ":", [ !Ref "AWS::StackName", PublicInstance01 ] ]
+
+  PrivateInstance01Ref:
+    Description: Reference to the PrivateInstance01
+    Value: !Ref Webserver02
+    Export:
+      Name: !Join [ ":", [ !Ref "AWS::StackName", PrivateInstance01 ] ] 
