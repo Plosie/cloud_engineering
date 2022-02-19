@@ -62,7 +62,7 @@ Resources:
             Fn::ImportValue:
               !Sub "${StackName}:MyFirstSubnet"
           GroupSet: 
-            - Ref: PrivateInstanceSG 
+            - Ref: PublicInstanceSG 
       Tags:
         - Key: Name
           Value: PublicInstance01
